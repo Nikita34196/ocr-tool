@@ -46,17 +46,9 @@
     z-index: 0;
   }
 
-  .container {
-    width: 100%;
-    max-width: 760px;
-    position: relative;
-    z-index: 1;
-  }
+  .container { width: 100%; max-width: 760px; position: relative; z-index: 1; }
 
-  header {
-    margin-bottom: 48px;
-    text-align: center;
-  }
+  header { margin-bottom: 48px; text-align: center; }
 
   .logo-tag {
     display: inline-block;
@@ -81,11 +73,7 @@
     margin-bottom: 12px;
   }
 
-  .subtitle {
-    color: var(--muted);
-    font-size: 12px;
-    letter-spacing: 0.05em;
-  }
+  .subtitle { color: var(--muted); font-size: 12px; letter-spacing: 0.05em; }
 
   .card {
     background: var(--surface);
@@ -111,12 +99,20 @@
     margin-bottom: 16px;
   }
 
-  .key-row {
-    display: flex;
-    gap: 8px;
+  /* Worker URL поле */
+  .worker-url-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+  .worker-hint {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
   }
 
-  input[type="password"], input[type="text"] {
+  .worker-hint a { color: var(--accent); text-decoration: none; }
+
+  .key-row { display: flex; gap: 8px; }
+
+  input[type="password"], input[type="text"], input[type="url"] {
     flex: 1;
     background: var(--bg);
     border: 1px solid var(--border);
@@ -156,13 +152,9 @@
 
   .btn.secondary:hover { border-color: var(--accent); color: var(--accent); }
 
-  .key-status {
-    margin-top: 8px;
-    font-size: 11px;
-  }
-
-  .key-status.ok { color: var(--success); }
-  .key-status.err { color: var(--danger); }
+  .field-status { margin-top: 8px; font-size: 11px; }
+  .field-status.ok { color: var(--success); }
+  .field-status.err { color: var(--danger); }
 
   .drop-zone {
     border: 2px dashed var(--border);
@@ -203,16 +195,7 @@
   }
 
   .file-selected.show { display: flex; }
-
-  .file-name {
-    flex: 1;
-    font-size: 12px;
-    color: var(--accent2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
+  .file-name { flex: 1; font-size: 12px; color: var(--accent2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .file-size { font-size: 11px; color: var(--muted); flex-shrink: 0; }
 
   .run-btn {
@@ -268,12 +251,7 @@
   #result-card.show { display: block; }
   #result-card::before { background: var(--accent2); }
 
-  .result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 
   .result-text {
     background: var(--bg);
@@ -307,14 +285,7 @@
 
   .error-msg.show { display: block; }
 
-  footer {
-    margin-top: 48px;
-    text-align: center;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-  }
-
+  footer { margin-top: 48px; text-align: center; font-size: 10px; color: var(--muted); letter-spacing: 0.1em; }
   footer a { color: var(--accent); text-decoration: none; }
 </style>
 </head>
@@ -327,15 +298,29 @@
     <p class="subtitle">PDF · JPG · PNG · без ограничений по размеру</p>
   </header>
 
-  <!-- Ключ -->
-  <div class="card" id="key-card">
+  <!-- Worker URL -->
+  <div class="card">
+    <div class="card-title">// Адрес прокси (Cloudflare Worker)</div>
+    <div class="worker-url-row">
+      <input type="url" id="worker-url" placeholder="https://ВАШ-ВОРКЕР.workers.dev">
+      <button class="btn" onclick="saveWorkerUrl()">Сохранить</button>
+    </div>
+    <div class="field-status" id="worker-status"></div>
+    <div class="worker-hint" style="margin-top:10px">
+      Нужен один раз. Инструкция: <a href="https://workers.cloudflare.com" target="_blank">workers.cloudflare.com</a>
+      → New Worker → вставить worker.js → Deploy
+    </div>
+  </div>
+
+  <!-- API Ключ -->
+  <div class="card">
     <div class="card-title">// API ключ Anthropic</div>
     <div class="key-row">
       <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
       <button class="btn" onclick="saveKey()">Сохранить</button>
       <button class="btn secondary" onclick="toggleKeyVisibility()">👁</button>
     </div>
-    <div class="key-status" id="key-status"></div>
+    <div class="field-status" id="key-status"></div>
   </div>
 
   <!-- Загрузка файла -->
@@ -346,7 +331,7 @@
       <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="onFileSelect(this)">
       <span class="drop-icon">📄</span>
       <div class="drop-text">Перетащите файл или нажмите для выбора</div>
-      <div class="drop-hint">Поддерживается: PDF, JPG, PNG</div>
+      <div class="drop-hint">PDF, JPG, PNG — без ограничений по размеру</div>
     </div>
 
     <div class="file-selected" id="file-selected">
@@ -386,28 +371,52 @@
 <script>
   let selectedFile = null;
 
-  // ─── Ключ ──────────────────────────────────────────────────────────────────
+  // ─── Загрузка сохранённых данных ──────────────────────────────────────────
 
-  function loadKey() {
+  function loadSaved() {
+    const url = localStorage.getItem('worker_url') || '';
     const key = localStorage.getItem('anthropic_key') || '';
+
+    if (url) {
+      document.getElementById('worker-url').value = url;
+      document.getElementById('worker-status').textContent = '✓ Адрес загружен';
+      document.getElementById('worker-status').className = 'field-status ok';
+    }
     if (key) {
       document.getElementById('api-key-input').value = key;
-      document.getElementById('key-status').textContent = '✓ Ключ загружен из браузера';
-      document.getElementById('key-status').className = 'key-status ok';
+      document.getElementById('key-status').textContent = '✓ Ключ загружен';
+      document.getElementById('key-status').className = 'field-status ok';
     }
     updateRunBtn();
   }
 
+  // ─── Worker URL ───────────────────────────────────────────────────────────
+
+  function saveWorkerUrl() {
+    const url = document.getElementById('worker-url').value.trim();
+    if (!url.startsWith('https://')) {
+      document.getElementById('worker-status').textContent = '✗ URL должен начинаться с https://';
+      document.getElementById('worker-status').className = 'field-status err';
+      return;
+    }
+    localStorage.setItem('worker_url', url);
+    document.getElementById('worker-status').textContent = '✓ Адрес сохранён';
+    document.getElementById('worker-status').className = 'field-status ok';
+    updateRunBtn();
+  }
+
+  // ─── API ключ ─────────────────────────────────────────────────────────────
+
   function saveKey() {
     const key = document.getElementById('api-key-input').value.trim();
     if (!key.startsWith('sk-ant-')) {
-      document.getElementById('key-status').textContent = '✗ Неверный формат (должен начинаться с sk-ant-)';
-      document.getElementById('key-status').className = 'key-status err';
+      document.getElementById('key-status').textContent = '✗ Должен начинаться с sk-ant-';
+      document.getElementById('key-status').className = 'field-status err';
       return;
     }
     localStorage.setItem('anthropic_key', key);
-    document.getElementById('key-status').textContent = '✓ Ключ сохранён в браузере';
-    document.getElementById('key-status').className = 'key-status ok';
+    document.getElementById('key-status').textContent = '✓ Ключ сохранён';
+    document.getElementById('key-status').className = 'field-status ok';
     updateRunBtn();
   }
 
@@ -417,8 +426,11 @@
   }
 
   function getKey() {
-    return document.getElementById('api-key-input').value.trim()
-      || localStorage.getItem('anthropic_key') || '';
+    return document.getElementById('api-key-input').value.trim() || localStorage.getItem('anthropic_key') || '';
+  }
+
+  function getWorkerUrl() {
+    return document.getElementById('worker-url').value.trim() || localStorage.getItem('worker_url') || '';
   }
 
   // ─── Файл ─────────────────────────────────────────────────────────────────
@@ -449,7 +461,7 @@
   }
 
   function updateRunBtn() {
-    document.getElementById('run-btn').disabled = !(selectedFile && getKey());
+    document.getElementById('run-btn').disabled = !(selectedFile && getKey() && getWorkerUrl());
   }
 
   // ─── Drag & Drop ──────────────────────────────────────────────────────────
@@ -468,7 +480,8 @@
 
   async function recognize() {
     const key = getKey();
-    if (!key || !selectedFile) return;
+    const workerUrl = getWorkerUrl();
+    if (!key || !workerUrl || !selectedFile) return;
 
     setLoading(true);
     hideError();
@@ -496,55 +509,31 @@
 
       setProgress('Нейросеть анализирует документ...');
 
-      let response;
-      try {
-        response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
-            messages: [{
-              role: 'user',
-              content: [contentBlock, { type: 'text', text: prompt }]
-            }]
-          })
-        });
-      } catch (fetchErr) {
-        // Сетевая ошибка или CORS
-        throw new Error(
-          'Не удалось подключиться к серверу Anthropic.\n\n' +
-          'Возможные причины:\n' +
-          '• Нет интернета\n' +
-          '• Браузер блокирует запрос (попробуйте другой браузер)\n' +
-          '• VPN или антивирус блокирует api.anthropic.com\n\n' +
-          'Техническая ошибка: ' + fetchErr.message
-        );
-      }
-
-      if (!response.ok) {
-        let errMsg = `HTTP ${response.status}`;
-        try {
-          const errData = await response.json();
-          errMsg = errData?.error?.message || errMsg;
-        } catch (_) {}
-
-        if (response.status === 401) throw new Error('Неверный API ключ. Проверьте ключ на console.anthropic.com');
-        if (response.status === 429) throw new Error('Превышен лимит запросов. Подождите минуту и попробуйте снова.');
-        if (response.status === 400) throw new Error('Ошибка запроса: ' + errMsg);
-        if (response.status === 529) throw new Error('Серверы Anthropic перегружены. Попробуйте позже.');
-        throw new Error(`Ошибка сервера (${response.status}): ${errMsg}`);
-      }
+      const response = await fetch(workerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: key,
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          messages: [{
+            role: 'user',
+            content: [contentBlock, { type: 'text', text: prompt }]
+          }]
+        })
+      });
 
       const data = await response.json();
-      const text = data.content?.[0]?.text?.trim();
 
-      if (!text) throw new Error('Пустой ответ от Claude — возможно, документ нечитаем.');
+      if (!response.ok) {
+        const msg = data?.error?.message || `HTTP ${response.status}`;
+        if (response.status === 401) throw new Error('Неверный API ключ.');
+        if (response.status === 429) throw new Error('Превышен лимит запросов. Подождите минуту.');
+        throw new Error(msg);
+      }
+
+      const text = data.content?.[0]?.text?.trim();
+      if (!text) throw new Error('Пустой ответ — документ нечитаем.');
 
       showResult(text);
 
@@ -604,7 +593,7 @@
     setTimeout(() => { btn.textContent = 'КОПИРОВАТЬ'; btn.classList.remove('copied'); }, 2000);
   }
 
-  loadKey();
+  loadSaved();
 </script>
 </body>
 </html>
